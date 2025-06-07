@@ -1,0 +1,393 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Todo App</title>
+
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; }
+  #todo-section { display: none; }
+  ul { list-style-type: none; padding: 0; }
+  li { cursor: pointer; padding: 5px; }
+  li:hover { background: #eee; }
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 480px;
+    margin: 20px auto;
+    padding: 0 15px;
+    background: #f9f9f9;
+    color: #333;
+  }
+  h2, h3 {
+    color: #ff6600;
+  }
+  input {
+    padding: 8px;
+    margin: 5px 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  button {
+    background-color: #ff6600;
+    border: none;
+    color: white;
+    padding: 10px 15px;
+    cursor: pointer;
+    margin-top: 8px;
+    width: 100%;
+    font-size: 1rem;
+  }
+  button:hover {
+    background-color: #e65500;
+  }
+  #todo-list li {
+    list-style: none;
+    background: white;
+    margin: 8px 0;
+    padding: 12px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  #todo-list li.completed {
+    text-decoration: line-through;
+    color: gray;
+  }
+  .error {
+    color: red;
+    margin: 10px 0;
+  }
+  .loading {
+    margin: 10px 0;
+    font-style: italic;
+    color: #555;
+  }
+  .task-actions button {
+    margin-left: 5px;
+    padding: 5px 8px;
+    font-size: 0.9rem;
+  }
+  .toggle-link {
+    text-align: center;
+    margin: 10px 0 20px;
+    color: #0077cc;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .task-info {
+    font-size: 0.85rem;
+    color: #555;
+    margin-left: 10px;
+  }
+
+  body { font-family: Arial, sans-serif; padding: 20px; max-width: 480px; margin: 20px auto; background: #f9f9f9; color: #333; }
+  #todo-section { display: none; }
+  ul { list-style-type: none; padding: 0; }
+  li { background: white; margin: 8px 0; padding: 12px 15px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+  li.completed span.title { text-decoration: line-through; color: gray; }
+  .task-info { font-size: 0.85rem; color: #555; margin-left: 10px; }
+  button {
+    background-color: #ff6600;
+    border: none;
+    color: white;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 1rem;
+  }
+  button:hover { background-color: #e65500; }
+  .small-btn {
+    padding: 5px 10px;
+    font-size: 0.85rem;
+    margin-left: 5px;
+  }
+  .task-details {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+  }
+  .toggle-link {
+    text-align: center;
+    margin: 10px 0 20px;
+    color: #0077cc;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+</style>
+</head>
+<body>
+
+<div id="auth-section">
+  <div id="register-form">
+    <h2>Register</h2>
+    <input id="register-username" placeholder="Username" />
+    <input id="register-password" placeholder="Password" type="password" />
+    <button id="register-btn">Register</button>
+    <div class="toggle-link" id="show-login">Already have an account? Login</div>
+  </div>
+
+  <div id="login-form" style="display:none;">
+    <h2>Login</h2>
+    <input id="login-username" placeholder="Username" />
+    <input id="login-password" placeholder="Password" type="password" />
+    <button id="login-btn">Login</button>
+    <div class="toggle-link" id="show-register">Don't have an account? Register</div>
+  </div>
+</div>
+
+<div id="todo-section">
+  <button id="logout-btn">Logout</button>
+  <h2>Your Todos</h2>
+  <ul id="todo-list"></ul>
+
+  <h3>Add Task</h3>
+  <input id="task-title" placeholder="Task Title" />
+  <input id="task-desc" placeholder="Description (optional)" />
+  
+  <button id="add-task-btn">Add Task</button>
+</div>
+
+<script>
+const API_URL = 'http://localhost:3000';
+
+const authSection = document.getElementById('auth-section');
+const todoSection = document.getElementById('todo-section');
+
+const registerForm = document.getElementById('register-form');
+const loginForm = document.getElementById('login-form');
+
+const registerUsername = document.getElementById('register-username');
+const registerPassword = document.getElementById('register-password');
+const registerBtn = document.getElementById('register-btn');
+
+const loginUsername = document.getElementById('login-username');
+const loginPassword = document.getElementById('login-password');
+const loginBtn = document.getElementById('login-btn');
+
+const logoutBtn = document.getElementById('logout-btn');
+
+const todoList = document.getElementById('todo-list');
+const taskTitle = document.getElementById('task-title');
+const taskDesc = document.getElementById('task-desc');
+const taskDatetime = document.getElementById('task-datetime');
+const addTaskBtn = document.getElementById('add-task-btn');
+
+const showLoginLink = document.getElementById('show-login');
+const showRegisterLink = document.getElementById('show-register');
+
+let token = localStorage.getItem('token');
+
+// Toggle forms
+showLoginLink.onclick = () => {
+  registerForm.style.display = 'none';
+  loginForm.style.display = 'block';
+};
+showRegisterLink.onclick = () => {
+  loginForm.style.display = 'none';
+  registerForm.style.display = 'block';
+};
+
+function clearAuthInputs() {
+  registerUsername.value = '';
+  registerPassword.value = '';
+  loginUsername.value = '';
+  loginPassword.value = '';
+}
+
+function updateUI() {
+  if (token) {
+    authSection.style.display = 'none';
+    todoSection.style.display = 'block';
+    fetchTodos();
+  } else {
+    authSection.style.display = 'block';
+    todoSection.style.display = 'none';
+    clearAuthInputs();
+  }
+}
+
+registerBtn.onclick = async () => {
+  const username = registerUsername.value.trim();
+  const password = registerPassword.value.trim();
+
+  if (!username || !password) return alert('Please fill in both fields');
+
+  const res = await fetch(`${API_URL}/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (res.ok) {
+    alert('Registered successfully! You can now log in.');
+    clearAuthInputs();
+    registerForm.style.display = 'none';
+    loginForm.style.display = 'block';
+  } else {
+    const error = await res.json();
+    alert('Error: ' + (error.error || 'Registration failed'));
+  }
+};
+
+loginBtn.onclick = async () => {
+  const username = loginUsername.value.trim();
+  const password = loginPassword.value.trim();
+
+  if (!username || !password) return alert('Please fill in both fields');
+
+  const res = await fetch(`${API_URL}/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (res.ok) {
+    const data = await res.json();
+    token = data.token;
+    localStorage.setItem('token', token);
+    clearAuthInputs();
+    updateUI();
+  } else {
+    const error = await res.json();
+    alert('Error: ' + (error.error || 'Login failed'));
+  }
+};
+
+logoutBtn.onclick = () => {
+  token = null;
+  localStorage.removeItem('token');
+  updateUI();
+};
+
+async function fetchTodos() {
+  const res = await fetch(`${API_URL}/todos`, {
+    headers: { 'Authorization': 'Bearer ' + token },
+  });
+  if (res.ok) {
+    const todos = await res.json();
+    todoList.innerHTML = '';
+
+    todos.forEach(task => {
+      const li = document.createElement('li');
+      li.className = task.completed ? 'completed' : '';
+
+      // Task title
+      const titleSpan = document.createElement('span');
+      titleSpan.textContent = task.title;
+      titleSpan.className = 'title';
+
+      // Date/time info
+      const dateSpan = document.createElement('span');
+      dateSpan.className = 'task-info';
+
+      if (task.datetime) {
+        const dt = new Date(task.datetime);
+        if (!isNaN(dt)) {
+          dateSpan.textContent = dt.toLocaleString();
+        } else {
+          dateSpan.textContent = 'Invalid date';
+        }
+      } else {
+        dateSpan.textContent = 'No date set';
+      }
+
+      // Container for title + date
+      const taskDetailsDiv = document.createElement('div');
+      taskDetailsDiv.className = 'task-details';
+      taskDetailsDiv.appendChild(titleSpan);
+      
+
+      li.appendChild(taskDetailsDiv);
+
+      // Toggle complete button
+      const toggleBtn = document.createElement('button');
+      toggleBtn.textContent = task.completed ? 'Undo' : 'Done';
+      toggleBtn.className = 'small-btn';
+      toggleBtn.onclick = async (e) => {
+        e.stopPropagation();
+        await toggleTask(task._id);
+      };
+
+      // Delete button
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.className = 'small-btn';
+      deleteBtn.style.backgroundColor = '#cc3300';
+      deleteBtn.onclick = async (e) => {
+        e.stopPropagation();
+        if (confirm('Delete this task?')) {
+          await deleteTask(task._id);
+        }
+      };
+
+      li.appendChild(toggleBtn);
+      li.appendChild(deleteBtn);
+
+      todoList.appendChild(li);
+    });
+  } else {
+    alert('Failed to fetch tasks');
+  }
+}
+
+addTaskBtn.onclick = async () => {
+  const title = taskTitle.value.trim();
+  const description = taskDesc.value.trim();
+  const datetime = taskDatetime.value;
+
+  if (!title) return alert('Task title is required');
+  if (!datetime) return alert('Please select date and time');
+
+  const res = await fetch(`${API_URL}/todos`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token,
+    },
+    body: JSON.stringify({ title, description,}),
+  });
+
+  if (res.ok) {
+    taskTitle.value = '';
+    taskDesc.value = '';
+    
+    fetchTodos();
+  } else {
+    alert('Failed to add task');
+  }
+};
+
+async function toggleTask(id) {
+  const res = await fetch(`${API_URL}/todos/${id}`, {
+    method: 'PUT',
+    headers: { 'Authorization': 'Bearer ' + token },
+  });
+
+  if (res.ok) {
+    fetchTodos();
+  } else {
+    alert('Failed to update task');
+  }
+}
+
+async function deleteTask(id) {
+  const res = await fetch(`${API_URL}/todos/${id}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer ' + token },
+  });
+
+  if (res.ok) {
+    fetchTodos();
+  } else {
+    alert('Failed to delete task');
+  }
+}
+
+updateUI();
+</script>
+
+</body>
+</html>
