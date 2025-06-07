@@ -104,5 +104,5 @@ app.delete('/todos/:id', authenticateToken, async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`✅ Todo API running at http://localhost:${port}`);
+  console.log(`✅ Todo API running at https://todo-backend-pe6h.onrender.com`);
 });
